@@ -117,6 +117,7 @@ def parse_binance_trades(
             fee_quantity=Decimal(row_dict["Fee"]),
             fee_asset=row_dict["Fee Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     elif row_dict["Type"] == "SELL":
         data_row.t_record = TransactionOutRecord(
@@ -129,6 +130,7 @@ def parse_binance_trades(
             fee_quantity=Decimal(row_dict["Fee"]),
             fee_asset=row_dict["Fee Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     else:
         raise UnexpectedTypeError(parser.in_header.index("Type"), "Type", row_dict["Type"])
@@ -155,6 +157,7 @@ def parse_binance_convert(
         sell_quantity=Decimal(row_dict["Sell"].split(" ")[0]),
         sell_asset=row_dict["Sell"].split(" ")[1],
         wallet=WALLET,
+        note=row_dict["Remark"],
     )
 
 
@@ -179,6 +182,7 @@ def parse_binance_trades_statement(
             fee_quantity=fee_quantity,
             fee_asset=fee_asset,
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     elif row_dict["Side"] == "SELL":
         buy_quantity, buy_asset = _split_asset(row_dict["Amount"].replace(",", ""))
@@ -194,6 +198,7 @@ def parse_binance_trades_statement(
             fee_quantity=fee_quantity,
             fee_asset=fee_asset,
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     else:
         raise UnexpectedTypeError(parser.in_header.index("Side"), "Side", row_dict["Side"])
@@ -242,6 +247,7 @@ def parse_binance_deposits_withdrawals_crypto_v2(
             buy_quantity=Decimal(row_dict["Amount"]),
             buy_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     else:
         data_row.t_record = TransactionOutRecord(
@@ -252,6 +258,7 @@ def parse_binance_deposits_withdrawals_crypto_v2(
             fee_quantity=Decimal(row_dict["Fee"]),
             fee_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
 
 
@@ -284,6 +291,7 @@ def parse_binance_deposits_withdrawals_crypto_v1(
             fee_quantity=Decimal(row_dict["TransactionFee"]),
             fee_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     elif "withdraw" in kwargs["filename"].lower():
         data_row.t_record = TransactionOutRecord(
@@ -294,6 +302,7 @@ def parse_binance_deposits_withdrawals_crypto_v1(
             fee_quantity=Decimal(row_dict["TransactionFee"]),
             fee_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     else:
         raise DataFilenameError(kwargs["filename"], "Transaction Type (Deposit or Withdrawal)")
@@ -324,6 +333,7 @@ def parse_binance_deposits_withdrawals_cash(
             fee_quantity=Decimal(row_dict["Fee"]),
             fee_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     elif "withdraw" in kwargs["filename"].lower():
         data_row.t_record = TransactionOutRecord(
@@ -334,6 +344,7 @@ def parse_binance_deposits_withdrawals_cash(
             fee_quantity=Decimal(row_dict["Fee"]),
             fee_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     else:
         raise DataFilenameError(kwargs["filename"], "Transaction Type (Deposit or Withdrawal)")
@@ -388,7 +399,7 @@ def _parse_binance_statements_row(
         _parse_binance_statements_margin_row(tx_times, parser, data_row)
         return
 
-    if row_dict["Account"].lower() not in ("spot", "earn", "pool", "savings"):
+    if row_dict["Account"].lower() not in ("spot", "earn", "funding", "pool", "savings"):
         raise UnexpectedTypeError(parser.in_header.index("Account"), "Account", row_dict["Account"])
 
     if row_dict["Operation"] in (
@@ -405,11 +416,15 @@ def _parse_binance_statements_row(
             buy_quantity=Decimal(row_dict["Change"]),
             buy_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     elif row_dict["Operation"] in (
         "Airdrop Assets",
         "Cash Voucher distribution",
         "Simple Earn Flexible Airdrop",
+        "Launchpool Airdrop",
+        "HODLer Airdrops Distribution",
+        "Megadrop Rewards",
     ):
         data_row.t_record = TransactionOutRecord(
             TrType.AIRDROP,
@@ -417,6 +432,7 @@ def _parse_binance_statements_row(
             buy_quantity=Decimal(row_dict["Change"]),
             buy_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     elif row_dict["Operation"] in (
         "Distribution",
@@ -430,6 +446,7 @@ def _parse_binance_statements_row(
                 buy_quantity=Decimal(row_dict["Change"]),
                 buy_asset=row_dict["Coin"],
                 wallet=WALLET,
+                note=row_dict["Remark"],
             )
         else:
             data_row.t_record = TransactionOutRecord(
@@ -439,6 +456,7 @@ def _parse_binance_statements_row(
                 sell_asset=row_dict["Coin"],
                 sell_value=Decimal(0),
                 wallet=WALLET,
+                note=row_dict["Remark"],
             )
     elif row_dict["Operation"] == "Super BNB Mining":
         data_row.t_record = TransactionOutRecord(
@@ -447,6 +465,7 @@ def _parse_binance_statements_row(
             buy_quantity=Decimal(row_dict["Change"]),
             buy_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     elif row_dict["Operation"] in (
         "Savings Interest",
@@ -462,6 +481,7 @@ def _parse_binance_statements_row(
             buy_quantity=Decimal(row_dict["Change"]),
             buy_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     elif row_dict["Operation"] in (
         "POS savings interest",
@@ -480,6 +500,7 @@ def _parse_binance_statements_row(
             buy_quantity=Decimal(row_dict["Change"]),
             buy_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     elif row_dict["Operation"] in ("Asset Recovery", "Leveraged Coin Consolidation"):
         # Replace with REBASE in the future
@@ -490,8 +511,9 @@ def _parse_binance_statements_row(
             sell_asset=row_dict["Coin"],
             sell_value=Decimal(0),
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
-    elif row_dict["Operation"] in ("Small assets exchange BNB", "Small Assets Exchange BNB"):
+    elif row_dict["Operation"] in ("Small assets exchange BNB", "Small Assets Exchange BNB", "BNB Fee Deduction"):
         if config.binance_multi_bnb_split_even:
             _make_bnb_trade(
                 _get_op_rows(tx_times, data_row.timestamp, (row_dict["Operation"],)),
@@ -532,6 +554,7 @@ def _parse_binance_statements_row(
         "Transfer Between Spot Account and UM Futures Account",
         "Transfer Between Spot Account and CM Futures Account",
         "Transfer Between Main Account/Futures and Margin Account",
+        "Transfer Between Main and Funding Wallet",
         "Launchpool Subscription/Redemption",
         "Launchpad Subscribe",
         "Simple Earn Flexible Subscription",  # See merger
@@ -550,11 +573,29 @@ def _parse_binance_statements_row(
                 buy_quantity=Decimal(row_dict["Change"]),
                 buy_asset=row_dict["Coin"],
                 wallet=WALLET,
+                note=row_dict["Remark"],
             )
         else:
             # Skip duplicate operations
             return
-    elif row_dict["Operation"] in ("Withdraw", "Fiat Withdraw"):
+    elif row_dict["Operation"] in (
+        "Crypto - Asset Transfer",
+        "Fiat OCBS - Add Fiat and Fees",
+        "Asset - Transfer",
+    ):
+        data_row.t_record = TransactionOutRecord(
+            TrType.DEPOSIT,
+            data_row.timestamp,
+            buy_quantity=Decimal(row_dict["Change"]),
+            buy_asset=row_dict["Coin"],
+            wallet=WALLET,
+            note=row_dict["Remark"],
+        )
+    elif row_dict["Operation"] in (
+        "Withdraw",
+        "Fiat Withdraw",
+        "Fiat Withdrawal",
+    ):
         if config.binance_statements_only:
             data_row.t_record = TransactionOutRecord(
                 TrType.WITHDRAWAL,
@@ -562,10 +603,33 @@ def _parse_binance_statements_row(
                 sell_quantity=abs(Decimal(row_dict["Change"])),
                 sell_asset=row_dict["Coin"],
                 wallet=WALLET,
+                note=row_dict["Remark"],
             )
         else:
             # Skip duplicate operations
             return
+    elif row_dict["Operation"] in (
+        "Binance Card Spending",
+        "Crypto Box",
+        "Send",
+    ):
+            data_row.t_record = TransactionOutRecord(
+                TrType.WITHDRAWAL,
+                data_row.timestamp,
+                sell_quantity=abs(Decimal(row_dict["Change"])),
+                sell_asset=row_dict["Coin"],
+                wallet=WALLET,
+                note=row_dict["Remark"],
+            )
+    elif row_dict["Operation"] == "Binance Card Cashback":
+        data_row.t_record = TransactionOutRecord(
+            TrType.CASHBACK,
+            data_row.timestamp,
+            buy_quantity=abs(Decimal(row_dict["Change"])),
+            buy_asset=row_dict["Coin"],
+            wallet=WALLET,
+            note=row_dict["Remark"],
+        )
     elif row_dict["Operation"] in ("Binance Convert", "Large OTC trading"):
         if config.binance_statements_only:
             _make_trade(
@@ -574,6 +638,10 @@ def _parse_binance_statements_row(
         else:
             # Skip duplicate operations
             return
+    elif row_dict["Operation"] == "Buy Crypto With Card":
+        _make_trade(
+            _get_op_rows(tx_times, data_row.timestamp, (row_dict["Operation"],)),
+        )
     elif row_dict["Operation"] in (
         "Buy",
         "Sell",
@@ -625,6 +693,7 @@ def _parse_binance_statements_futures_row(
                 buy_quantity=Decimal(row_dict["Change"]),
                 buy_asset=row_dict["Coin"],
                 wallet=WALLET,
+                note=row_dict["Remark"],
             )
         else:
             data_row.t_record = TransactionOutRecord(
@@ -633,6 +702,7 @@ def _parse_binance_statements_futures_row(
                 sell_quantity=abs(Decimal(row_dict["Change"])),
                 sell_asset=row_dict["Coin"],
                 wallet=WALLET,
+                note=row_dict["Remark"],
             )
     elif row_dict["Operation"] in ("Fee", "Insurance Fund Compensation"):
         data_row.t_record = TransactionOutRecord(
@@ -641,8 +711,9 @@ def _parse_binance_statements_futures_row(
             sell_quantity=abs(Decimal(row_dict["Change"])),
             sell_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
-    elif row_dict["Operation"] == "Funding Fee":
+    elif row_dict["Operation"] in ("Funding Fee", "Insurance Fund Refund"):
         if Decimal(row_dict["Change"]) > 0:
             data_row.t_record = TransactionOutRecord(
                 TrType.FEE_REBATE,
@@ -650,6 +721,7 @@ def _parse_binance_statements_futures_row(
                 buy_quantity=Decimal(row_dict["Change"]),
                 buy_asset=row_dict["Coin"],
                 wallet=WALLET,
+                note=row_dict["Remark"],
             )
         else:
             data_row.t_record = TransactionOutRecord(
@@ -658,6 +730,7 @@ def _parse_binance_statements_futures_row(
                 sell_quantity=abs(Decimal(row_dict["Change"])),
                 sell_asset=row_dict["Coin"],
                 wallet=WALLET,
+                note=row_dict["Remark"],
             )
     elif row_dict["Operation"] in ("Referrer rebates", "Referee rebates"):
         data_row.t_record = TransactionOutRecord(
@@ -666,6 +739,7 @@ def _parse_binance_statements_futures_row(
             buy_quantity=Decimal(row_dict["Change"]),
             buy_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     elif row_dict["Operation"] in ("Asset Conversion Transfer", "Futures Convert"):
         _make_trade(
@@ -691,21 +765,23 @@ def _parse_binance_statements_margin_row(
 ) -> None:
     row_dict = data_row.row_dict
 
-    if row_dict["Operation"] in ("Margin loan", "Isolated Margin Loan"):
+    if row_dict["Operation"] in ("Margin Loan", "Isolated Margin Loan"):
         data_row.t_record = TransactionOutRecord(
             TrType.LOAN,
             data_row.timestamp,
             buy_quantity=Decimal(row_dict["Change"]),
             buy_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
-    elif row_dict["Operation"] in ("Margin Repayment", "Isolated Margin Repayment"):
+    elif row_dict["Operation"] in ("Margin Repayment", "Isolated Margin Repayment", "Cross Margin Liquidation - Repayment"):
         data_row.t_record = TransactionOutRecord(
             TrType.LOAN_REPAYMENT,
             data_row.timestamp,
             sell_quantity=abs(Decimal(row_dict["Change"])),
             sell_asset=row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
     elif row_dict["Operation"] in (
         "Buy",
@@ -733,7 +809,15 @@ def _parse_binance_statements_margin_row(
                 ),
             ),
         )
-
+    elif row_dict["Operation"] in ("Small assets exchange BNB", "Small Assets Exchange BNB"):
+        if config.binance_multi_bnb_split_even:
+            _make_bnb_trade(
+                _get_op_rows(tx_times, data_row.timestamp, (row_dict["Operation"],)),
+            )
+        else:
+            _make_trade(
+                _get_op_rows(tx_times, data_row.timestamp, (row_dict["Operation"],)),
+            )
     elif row_dict["Operation"] == "Transfer Between Main Account/Futures and Margin Account":
         # Skip not taxable events
         return
@@ -887,6 +971,7 @@ def _make_bnb_trade(op_rows: List["DataRow"]) -> None:
             sell_quantity=abs(Decimal(sell_row.row_dict["Change"])),
             sell_asset=sell_row.row_dict["Coin"],
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
 
 
@@ -943,6 +1028,7 @@ def _make_trade(op_rows: List["DataRow"]) -> None:
             sell_quantity=sell_quantity,
             sell_asset=sell_asset,
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
 
 
@@ -989,6 +1075,7 @@ def _make_trade_with_fee(op_rows: List["DataRow"]) -> None:
             fee_quantity=fee_quantity,
             fee_asset=fee_asset,
             wallet=WALLET,
+            note=row_dict["Remark"],
         )
 
 
