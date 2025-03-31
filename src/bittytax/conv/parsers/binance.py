@@ -514,20 +514,14 @@ def _parse_binance_statements_row(
             wallet=WALLET,
             note=row_dict["Remark"],
         )
-    # Those operations cannot be triggered twice in a row
-    elif row_dict["Operation"] in ("Small assets exchange BNB", "Small Assets Exchange BNB"):
+    elif row_dict["Operation"] in (
+        "Small assets exchange BNB",
+        "Small Assets Exchange BNB",
+        "BNB Fee Deduction"
+    ):
         if config.binance_multi_bnb_split_even:
             _make_bnb_trade(
                 _get_op_rows_same_operation(tx_times, data_row.timestamp, (row_dict["Operation"],)),
-            )
-        else:
-            _make_trade(
-                _get_op_rows(tx_times, data_row.timestamp, (row_dict["Operation"],)),
-            )
-    elif row_dict["Operation"]  == "BNB Fee Deduction":
-        if config.binance_multi_bnb_split_even:
-            _make_bnb_trade(
-                _get_op_rows(tx_times, data_row.timestamp, (row_dict["Operation"],)),
             )
         else:
             _make_trade(
@@ -821,19 +815,14 @@ def _parse_binance_statements_margin_row(
             ),
         )
     # Those operations cannot be triggered twice in a row
-    elif row_dict["Operation"] in ("Small assets exchange BNB", "Small Assets Exchange BNB"):
+    elif row_dict["Operation"] in (
+        "Small assets exchange BNB",
+        "Small Assets Exchange BNB",
+        "BNB Fee Deduction"
+    ):
         if config.binance_multi_bnb_split_even:
             _make_bnb_trade(
                 _get_op_rows_same_operation(tx_times, data_row.timestamp, (row_dict["Operation"],)),
-            )
-        else:
-            _make_trade(
-                _get_op_rows(tx_times, data_row.timestamp, (row_dict["Operation"],)),
-            )
-    elif row_dict["Operation"]  == "BNB Fee Deduction":
-        if config.binance_multi_bnb_split_even:
-            _make_bnb_trade(
-                _get_op_rows(tx_times, data_row.timestamp, (row_dict["Operation"],)),
             )
         else:
             _make_trade(
@@ -990,50 +979,62 @@ def _get_op_rows_same_operation(
     return result
 
 def _make_bnb_trade(op_rows: List["DataRow"]) -> None:
-    buy_quantity = _get_bnb_quantity(op_rows)
-    sell_rows = [dr for dr in op_rows if not dr.parsed]
-    tot_buy_quantity = Decimal(0)
+    bnb_quantity = _get_bnb_quantity(op_rows)
+    other_rows = [dr for dr in op_rows if not dr.parsed]
+    tot_other_quantity = Decimal(0)
 
-    for cnt, sell_row in enumerate(sell_rows):
-        sell_row.parsed = True
+    for cnt, other_row in enumerate(other_rows):
+        other_row.parsed = True
 
-        if buy_quantity:
-            if cnt < len(sell_rows) - 1:
-                split_buy_quantity = Decimal(buy_quantity / len(sell_rows)).quantize(PRECISION)
-                tot_buy_quantity += split_buy_quantity
+        sys.stderr.write(
+                f"{Fore.BLUE}conv: "
+                f"_make_bnb_trade sell_row coin: {other_row.row_dict["Coin"]}\n"
+            )
+
+        if bnb_quantity:
+            if cnt < len(other_rows) - 1:
+                split_other_quantity = Decimal(bnb_quantity / len(other_rows)).quantize(PRECISION)
+                tot_other_quantity += split_other_quantity
             else:
-                split_buy_quantity = buy_quantity - tot_buy_quantity
+                split_other_quantity = bnb_quantity - tot_other_quantity
         else:
-            split_buy_quantity = None
+            split_other_quantity = None
 
-        sell_row.t_record = TransactionOutRecord(
+        if bnb_quantity > 0:
+            buy_quantity = Decimal(split_other_quantity)
+            buy_asset = "BNB"
+            sell_quantity = abs(Decimal(other_row.row_dict["Change"]))
+            sell_asset = other_row.row_dict["Coin"]
+        else:
+            buy_quantity = Decimal(other_row.row_dict["Change"])
+            buy_asset = other_row.row_dict["Coin"]
+            sell_quantity = abs(Decimal(split_other_quantity))
+            sell_asset = "BNB"
+
+        other_row.t_record = TransactionOutRecord(
             TrType.TRADE,
-            sell_row.timestamp,
-            buy_quantity=split_buy_quantity,
-            buy_asset="BNB",
-            sell_quantity=abs(Decimal(sell_row.row_dict["Change"])),
-            sell_asset=sell_row.row_dict["Coin"],
+            other_row.timestamp,
+            buy_quantity=buy_quantity,
+            buy_asset=buy_asset,
+            sell_quantity=sell_quantity,
+            sell_asset=sell_asset,
             wallet=WALLET,
-            note=sell_row.row_dict["Remark"],
+            note=other_row.row_dict["Remark"],
         )
 
 
 def _get_bnb_quantity(op_rows: List["DataRow"]) -> Optional[Decimal]:
-    buy_quantity = None
+    bnb_quantity = None
 
-    for data_row in op_rows:
-        if Decimal(data_row.row_dict["Change"]) > 0:
-            data_row.parsed = True
+    for data_row in filter(lambda dr: dr.row_dict["Coin"] == "BNB", op_rows):
+        data_row.parsed = True
 
-            if data_row.row_dict["Coin"] != "BNB":
-                continue
+        if bnb_quantity is None:
+            bnb_quantity = Decimal(data_row.row_dict["Change"])
+        else:
+            bnb_quantity += Decimal(data_row.row_dict["Change"])
 
-            if buy_quantity is None:
-                buy_quantity = Decimal(data_row.row_dict["Change"])
-            else:
-                buy_quantity += Decimal(data_row.row_dict["Change"])
-
-    return buy_quantity
+    return bnb_quantity
 
 
 def _make_trade(op_rows: List["DataRow"]) -> None:
