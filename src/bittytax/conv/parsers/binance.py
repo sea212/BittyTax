@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # (c) Nano Nano Ltd 2019
 
+from bisect import bisect_left
 import re
 import sys
 from datetime import datetime, timedelta
@@ -513,7 +514,17 @@ def _parse_binance_statements_row(
             wallet=WALLET,
             note=row_dict["Remark"],
         )
-    elif row_dict["Operation"] in ("Small assets exchange BNB", "Small Assets Exchange BNB", "BNB Fee Deduction"):
+    # Those operations cannot be triggered twice in a row
+    elif row_dict["Operation"] in ("Small assets exchange BNB", "Small Assets Exchange BNB"):
+        if config.binance_multi_bnb_split_even:
+            _make_bnb_trade(
+                _get_op_rows_same_operation(tx_times, data_row.timestamp, (row_dict["Operation"],)),
+            )
+        else:
+            _make_trade(
+                _get_op_rows(tx_times, data_row.timestamp, (row_dict["Operation"],)),
+            )
+    elif row_dict["Operation"]  == "BNB Fee Deduction":
         if config.binance_multi_bnb_split_even:
             _make_bnb_trade(
                 _get_op_rows(tx_times, data_row.timestamp, (row_dict["Operation"],)),
@@ -809,7 +820,17 @@ def _parse_binance_statements_margin_row(
                 ),
             ),
         )
+    # Those operations cannot be triggered twice in a row
     elif row_dict["Operation"] in ("Small assets exchange BNB", "Small Assets Exchange BNB"):
+        if config.binance_multi_bnb_split_even:
+            _make_bnb_trade(
+                _get_op_rows_same_operation(tx_times, data_row.timestamp, (row_dict["Operation"],)),
+            )
+        else:
+            _make_trade(
+                _get_op_rows(tx_times, data_row.timestamp, (row_dict["Operation"],)),
+            )
+    elif row_dict["Operation"]  == "BNB Fee Deduction":
         if config.binance_multi_bnb_split_even:
             _make_bnb_trade(
                 _get_op_rows(tx_times, data_row.timestamp, (row_dict["Operation"],)),
@@ -942,6 +963,31 @@ def _get_op_rows(
 
     return [dr for dr in tx_period if dr.row_dict["Operation"] in operations and not dr.parsed]
 
+# Is necessary because time delta for a group of some operations can be
+# greater than 1 second
+def _get_op_rows_same_operation(
+    tx_times: Dict[datetime, List["DataRow"]],
+    timestamp: datetime,
+    operations: Tuple[str, ...],
+) -> List["DataRow"]:
+    result = []
+
+    # Python 3.7+ guarantees ordered dicts
+    tx_times_keys = list(tx_times)
+    # Timestamps for the same operation can be several seconds across, thus it
+    # is necessary to determine the timestamps to obtain the data rows
+    idx = bisect_left(tx_times_keys, timestamp)
+    if idx == len(tx_times_keys) or tx_times_keys[idx] != timestamp:
+        raise ValueError
+    
+    for tstamp in tx_times_keys[idx::]:
+        for dr in tx_times[tstamp]:
+            if not dr.row_dict["Operation"] in operations:
+                return result
+            
+            result.append(dr)
+
+    return result
 
 def _make_bnb_trade(op_rows: List["DataRow"]) -> None:
     buy_quantity = _get_bnb_quantity(op_rows)
@@ -957,9 +1003,6 @@ def _make_bnb_trade(op_rows: List["DataRow"]) -> None:
                 tot_buy_quantity += split_buy_quantity
             else:
                 split_buy_quantity = buy_quantity - tot_buy_quantity
-
-            if config.debug:
-                sys.stderr.write(f"{Fore.GREEN}conv: split_buy_quantity={split_buy_quantity}\n")
         else:
             split_buy_quantity = None
 
@@ -971,7 +1014,7 @@ def _make_bnb_trade(op_rows: List["DataRow"]) -> None:
             sell_quantity=abs(Decimal(sell_row.row_dict["Change"])),
             sell_asset=sell_row.row_dict["Coin"],
             wallet=WALLET,
-            note=row_dict["Remark"],
+            note=sell_row.row_dict["Remark"],
         )
 
 
