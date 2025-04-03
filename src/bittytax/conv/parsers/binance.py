@@ -118,7 +118,6 @@ def parse_binance_trades(
             fee_quantity=Decimal(row_dict["Fee"]),
             fee_asset=row_dict["Fee Coin"],
             wallet=WALLET,
-            note=row_dict["Remark"],
         )
     elif row_dict["Type"] == "SELL":
         data_row.t_record = TransactionOutRecord(
@@ -131,7 +130,6 @@ def parse_binance_trades(
             fee_quantity=Decimal(row_dict["Fee"]),
             fee_asset=row_dict["Fee Coin"],
             wallet=WALLET,
-            note=row_dict["Remark"],
         )
     else:
         raise UnexpectedTypeError(parser.in_header.index("Type"), "Type", row_dict["Type"])
@@ -158,7 +156,6 @@ def parse_binance_convert(
         sell_quantity=Decimal(row_dict["Sell"].split(" ")[0]),
         sell_asset=row_dict["Sell"].split(" ")[1],
         wallet=WALLET,
-        note=row_dict["Remark"],
     )
 
 
@@ -183,7 +180,6 @@ def parse_binance_trades_statement(
             fee_quantity=fee_quantity,
             fee_asset=fee_asset,
             wallet=WALLET,
-            note=row_dict["Remark"],
         )
     elif row_dict["Side"] == "SELL":
         buy_quantity, buy_asset = _split_asset(row_dict["Amount"].replace(",", ""))
@@ -199,7 +195,7 @@ def parse_binance_trades_statement(
             fee_quantity=fee_quantity,
             fee_asset=fee_asset,
             wallet=WALLET,
-            note=row_dict["Remark"],
+
         )
     else:
         raise UnexpectedTypeError(parser.in_header.index("Side"), "Side", row_dict["Side"])
@@ -248,7 +244,6 @@ def parse_binance_deposits_withdrawals_crypto_v2(
             buy_quantity=Decimal(row_dict["Amount"]),
             buy_asset=row_dict["Coin"],
             wallet=WALLET,
-            note=row_dict["Remark"],
         )
     else:
         data_row.t_record = TransactionOutRecord(
@@ -259,7 +254,6 @@ def parse_binance_deposits_withdrawals_crypto_v2(
             fee_quantity=Decimal(row_dict["Fee"]),
             fee_asset=row_dict["Coin"],
             wallet=WALLET,
-            note=row_dict["Remark"],
         )
 
 
@@ -292,7 +286,6 @@ def parse_binance_deposits_withdrawals_crypto_v1(
             fee_quantity=Decimal(row_dict["TransactionFee"]),
             fee_asset=row_dict["Coin"],
             wallet=WALLET,
-            note=row_dict["Remark"],
         )
     elif "withdraw" in kwargs["filename"].lower():
         data_row.t_record = TransactionOutRecord(
@@ -303,7 +296,6 @@ def parse_binance_deposits_withdrawals_crypto_v1(
             fee_quantity=Decimal(row_dict["TransactionFee"]),
             fee_asset=row_dict["Coin"],
             wallet=WALLET,
-            note=row_dict["Remark"],
         )
     else:
         raise DataFilenameError(kwargs["filename"], "Transaction Type (Deposit or Withdrawal)")
@@ -334,7 +326,6 @@ def parse_binance_deposits_withdrawals_cash(
             fee_quantity=Decimal(row_dict["Fee"]),
             fee_asset=row_dict["Coin"],
             wallet=WALLET,
-            note=row_dict["Remark"],
         )
     elif "withdraw" in kwargs["filename"].lower():
         data_row.t_record = TransactionOutRecord(
@@ -345,7 +336,6 @@ def parse_binance_deposits_withdrawals_cash(
             fee_quantity=Decimal(row_dict["Fee"]),
             fee_asset=row_dict["Coin"],
             wallet=WALLET,
-            note=row_dict["Remark"],
         )
     else:
         raise DataFilenameError(kwargs["filename"], "Transaction Type (Deposit or Withdrawal)")
