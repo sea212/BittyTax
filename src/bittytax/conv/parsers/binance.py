@@ -986,11 +986,6 @@ def _make_bnb_trade(op_rows: List["DataRow"]) -> None:
     for cnt, other_row in enumerate(other_rows):
         other_row.parsed = True
 
-        sys.stderr.write(
-                f"{Fore.BLUE}conv: "
-                f"_make_bnb_trade sell_row coin: {other_row.row_dict["Coin"]}\n"
-            )
-
         if bnb_quantity:
             if cnt < len(other_rows) - 1:
                 split_other_quantity = Decimal(bnb_quantity / len(other_rows)).quantize(PRECISION)
